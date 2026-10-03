@@ -1,75 +1,101 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-theme="">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#092f50" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Daily Breakdown Unit</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="description" content="Monitoring harian status unit pertambangan: running, standby, maintenance, breakdown.">
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div class="page-shell">
-    <header class="topbar">
-      <div class="brand-panel">
-        <div class="brand-icon" aria-hidden="true"><span></span><span></span><span></span></div>
-        <div>
-          <div id="companyName" class="company-name">PT. DUTA SAMUDERA BERKASA</div>
-          <div class="company-subtitle">FIXED PLANT OPERATION</div>
+  <div class="wrap">
+
+    <div class="top">
+      <div>
+        <h1>Daily Breakdown Unit</h1>
+        <p class="sub">Monitoring status unit harian<span class="dot">·</span>sumber: Google Sheets</p>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="iconbtn" id="btn-reload" type="button">Muat ulang</button>
+        <button class="iconbtn" id="btn-theme" type="button">Tema</button>
+      </div>
+    </div>
+
+    <div id="banner"></div>
+
+    <div class="statusbar" id="statusbar"></div>
+
+    <!-- satu baris filter di atas semua yang dicakupnya -->
+    <div class="filters">
+      <div class="field">
+        <label for="f-site">Site</label>
+        <select id="f-site"></select>
+      </div>
+      <div class="field">
+        <label for="f-status">Status</label>
+        <select id="f-status"></select>
+      </div>
+      <div class="field">
+        <label for="f-q">Cari</label>
+        <input type="search" id="f-q" placeholder="kode unit, operator, penyebab…" autocomplete="off">
+      </div>
+      <div class="spacer"></div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <div style="font-size:12px; color:var(--text-muted); line-height:34px;">
+          Urut: klik judul kolom
+        </div>
+      </div>
+    </div>
+
+    <div id="content">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="panel" id="panel-site">
+        <header>
+          <h2>Rekap per site</h2>
+          <span class="note">seluruh unit</span>
+        </header>
+        <div class="tscroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Site</th>
+                <th class="num">Running</th>
+                <th class="num">Standby</th>
+                <th class="num">Maintenance</th>
+                <th class="num">Breakdown</th>
+                <th class="num">Total</th>
+                <th class="num">Availability</th>
+              </tr>
+            </thead>
+            <tbody id="s-body"></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="heading-panel">
-        <div class="eyebrow">OPERATIONAL MONITORING</div>
-        <h1 id="pageTitle">DAILY BREAKDOWN UNIT</h1>
-        <div class="sheet-date" id="sheetDate">Menghubungkan Google Sheets…</div>
-      </div>
-
-      <div class="sync-panel">
-        <div class="live-badge"><span id="liveDot" class="live-dot loading"></span><span id="liveText">CONNECTING</span></div>
-        <div class="sync-time" id="syncTime">—</div>
-        <button id="refreshBtn" class="refresh-btn" type="button">↻ Refresh</button>
-      </div>
-    </header>
-
-    <main>
-      <section class="kpi-section" aria-label="Ringkasan unit">
-        <article class="kpi-card total"><div class="kpi-label">TOTAL UNIT</div><div id="kpiTotal" class="kpi-number">—</div></article>
-        <article class="kpi-card running"><div class="kpi-label">RUNNING</div><div id="kpiRunning" class="kpi-number">—</div></article>
-        <article class="kpi-card standby"><div class="kpi-label">STANDBY</div><div id="kpiStandby" class="kpi-number">—</div></article>
-        <article class="kpi-card breakdown"><div class="kpi-label">BREAKDOWN</div><div id="kpiBreakdown" class="kpi-number">—</div></article>
-        <article class="kpi-card availability"><div class="kpi-label">AVAILABILITY</div><div id="kpiAvailability" class="kpi-number">—</div></article>
-      </section>
-
-      <section class="toolbar">
-        <div class="legend">
-          <span><i class="legend-dot running"></i>Running</span>
-          <span><i class="legend-dot standby"></i>Standby</span>
-          <span><i class="legend-dot maintenance"></i>Maintenance</span>
-          <span><i class="legend-dot breakdown"></i>Breakdown</span>
+      <div class="panel" id="panel-table">
+        <header>
+          <h2>Rekap unit</h2>
+          <span class="note"></span>
+        </header>
+        <div class="tscroll">
+          <table>
+            <thead id="t-head"></thead>
+            <tbody id="t-body"></tbody>
+          </table>
         </div>
-        <div class="source-note">Google Sheets • refresh otomatis <span id="refreshLabel">60</span> detik</div>
-      </section>
+      </div>
+    </div>
 
-      <section id="notice" class="notice hidden"></section>
-      <section id="loading" class="loading-grid">
-        <div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div>
-      </section>
-      <section id="siteGrid" class="site-grid hidden"></section>
-      <section id="reportWrap" class="report-wrap hidden"></section>
+    <p style="margin-top:18px; font-size:12px; color:var(--text-muted);">
+      Data dibaca langsung dari Google Sheets <em>Publish to web</em>. Untuk layout dashboard Anda,
+      status unit dibaca dari <strong>warna cell indikator</strong>: hijau = Running, abu-abu = Standby,
+      oranye = Maintenance, merah = Breakdown.
+    </p>
 
-      <details id="diagnostic" class="diagnostic hidden">
-        <summary>Diagnostic data</summary>
-        <pre id="diagnosticText"></pre>
-      </details>
-    </main>
-
-    <footer><span>SAFETY FIRST</span><span id="sheetNameFooter"></span></footer>
   </div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
