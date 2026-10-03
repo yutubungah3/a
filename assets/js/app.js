@@ -21,7 +21,7 @@ const CONFIG = {
   /* CSV dipertahankan sebagai fallback untuk sheet tabel biasa. */
   SHEET_CSV_URL: '/sheet-csv',
 
-  REFRESH_MINUTES: 5,    // auto refresh; 0 = mati
+  REFRESH_MINUTES: 1,    // auto refresh; 0 = mati
   STALE_HOURS: 8,
 
   /* Dipakai hanya oleh fallback parser CSV lama. */
