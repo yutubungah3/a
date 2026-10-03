@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="Daily Breakdown Monitoring - Mining Equipment" />
+  <title>Daily Breakdown Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow"><span class="live-dot"></span><span id="companyLabel">Operational Dashboard</span></div>
+        <h1 id="dashboardTitle">Daily Breakdown Monitoring</h1>
+        <p id="dashboardSubtitle">Mining Equipment • Live Unit Status</p>
+      </div>
+      <div class="header-meta">
+        <div class="sync-chip"><span class="sync-dot"></span><span id="syncText">Memuat data…</span></div>
+        <button class="primary-btn" id="refreshBtn" type="button" aria-label="Refresh data">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" aria-label="Ringkasan unit">
+        <article class="kpi-card">
+          <div class="kpi-icon">▦</div><div><div class="kpi-label">Total Unit</div><div class="kpi-value" id="kpiTotal">0</div></div>
+        </article>
+        <article class="kpi-card critical">
+          <div class="kpi-icon">!</div><div><div class="kpi-label">Breakdown</div><div class="kpi-value" id="kpiBreakdown">0</div></div>
+        </article>
+        <article class="kpi-card success">
+          <div class="kpi-icon">✓</div><div><div class="kpi-label">Ready / Available</div><div class="kpi-value" id="kpiReady">0</div></div>
+        </article>
+        <article class="kpi-card warning">
+          <div class="kpi-icon">⚙</div><div><div class="kpi-label">Maintenance</div><div class="kpi-value" id="kpiMaintenance">0</div></div>
+        </article>
+      </section>
+
+      <section class="toolbar-card">
+        <div class="toolbar-row">
+          <label class="search-box">
+            <span>⌕</span>
+            <input id="searchInput" type="search" placeholder="Cari unit, problem, PIC…" autocomplete="off" />
+          </label>
+          <select id="siteFilter" aria-label="Filter site"><option value="">Semua Site</option></select>
+          <select id="statusFilter" aria-label="Filter status"><option value="">Semua Status</option></select>
+          <select id="typeFilter" aria-label="Filter tipe"><option value="">Semua Tipe</option></select>
+          <button id="resetFilterBtn" class="ghost-btn" type="button">Reset</button>
+        </div>
+        <div class="toolbar-row secondary">
+          <div class="result-info"><strong id="resultCount">0</strong> unit ditampilkan</div>
+          <div class="view-toggle" role="group" aria-label="Pilihan tampilan">
+            <button class="view-btn active" data-view="cards" type="button">▦ Cards</button>
+            <button class="view-btn" data-view="table" type="button">☷ Table</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="errorBox" class="error-box hidden" role="alert"></section>
+      <section id="loadingState" class="loading-grid" aria-label="Memuat data">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </section>
+
+      <section id="cardsView" class="unit-grid hidden" aria-live="polite"></section>
+
+      <section id="tableView" class="table-card hidden">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Unit</th><th>Site</th><th>Tipe</th><th>Status</th><th>Remark / Problem</th><th>PIC</th><th>Update</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">⌕</div><h2>Data tidak ditemukan</h2><p>Coba ubah filter atau kata pencarian.</p>
+      </section>
+    </main>
+
+    <footer>
+      <span>Data source: Google Sheets</span><span>•</span><span>Auto refresh <span id="refreshIntervalLabel">60</span> detik</span>
+    </footer>
+  </div>
+
+  <dialog id="detailDialog">
+    <button class="dialog-close" id="dialogClose" type="button" aria-label="Tutup">×</button>
+    <div id="dialogContent"></div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
