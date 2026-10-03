@@ -3,82 +3,71 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0d3658" />
+  <meta name="theme-color" content="#092f50" />
   <title>Daily Breakdown Unit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <header class="masthead">
-      <div class="brand-box">
-        <div id="companyLogoWrap" class="logo-mark" aria-hidden="true">
-          <span></span><span></span><span></span>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-panel">
+        <div class="brand-icon" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div id="companyName" class="company-name">PT. DUTA SAMUDERA BERKASA</div>
+          <div class="company-subtitle">FIXED PLANT OPERATION</div>
         </div>
-        <img id="companyLogo" class="header-logo hidden" alt="Logo perusahaan" />
-        <div id="companyName" class="company-name">PT. DUTA SAMUDERA BERKASA</div>
       </div>
 
-      <div class="title-box">
-        <div class="title-kicker">OPERATIONAL MONITORING</div>
+      <div class="heading-panel">
+        <div class="eyebrow">OPERATIONAL MONITORING</div>
         <h1 id="pageTitle">DAILY BREAKDOWN UNIT</h1>
-        <div class="title-subrow">
-          <span id="pageSubtitle">FIXED PLANT</span>
-          <span class="separator">•</span>
-          <span id="sheetDate">Memuat data...</span>
-        </div>
+        <div class="sheet-date" id="sheetDate">Menghubungkan Google Sheets…</div>
       </div>
 
-      <div class="status-box">
-        <img id="certificationLogo" class="cert-logo hidden" alt="Certification" />
-        <div class="live-card">
-          <span id="syncDot" class="live-dot"></span>
-          <div>
-            <strong id="syncStatus">Menghubungkan</strong>
-            <small id="lastSync">Google Sheets</small>
-          </div>
-        </div>
-        <button id="refreshBtn" class="refresh-btn" type="button" title="Refresh data">↻ Refresh</button>
+      <div class="sync-panel">
+        <div class="live-badge"><span id="liveDot" class="live-dot loading"></span><span id="liveText">CONNECTING</span></div>
+        <div class="sync-time" id="syncTime">—</div>
+        <button id="refreshBtn" class="refresh-btn" type="button">↻ Refresh</button>
       </div>
     </header>
 
     <main>
-      <section class="kpi-grid" aria-label="Ringkasan unit">
-        <article class="kpi-card kpi-total"><div class="kpi-label">TOTAL UNIT</div><div id="kpiTotal" class="kpi-value">–</div></article>
-        <article class="kpi-card kpi-running"><div class="kpi-label">RUNNING</div><div id="kpiRunning" class="kpi-value">–</div></article>
-        <article class="kpi-card kpi-standby"><div class="kpi-label">STANDBY</div><div id="kpiStandby" class="kpi-value">–</div></article>
-        <article class="kpi-card kpi-breakdown"><div class="kpi-label">BREAKDOWN</div><div id="kpiBreakdown" class="kpi-value">–</div></article>
-        <article class="kpi-card kpi-availability"><div class="kpi-label">AVAILABILITY</div><div id="kpiAvailability" class="kpi-value">–</div></article>
+      <section class="kpi-section" aria-label="Ringkasan unit">
+        <article class="kpi-card total"><div class="kpi-label">TOTAL UNIT</div><div id="kpiTotal" class="kpi-number">—</div></article>
+        <article class="kpi-card running"><div class="kpi-label">RUNNING</div><div id="kpiRunning" class="kpi-number">—</div></article>
+        <article class="kpi-card standby"><div class="kpi-label">STANDBY</div><div id="kpiStandby" class="kpi-number">—</div></article>
+        <article class="kpi-card breakdown"><div class="kpi-label">BREAKDOWN</div><div id="kpiBreakdown" class="kpi-number">—</div></article>
+        <article class="kpi-card availability"><div class="kpi-label">AVAILABILITY</div><div id="kpiAvailability" class="kpi-number">—</div></article>
       </section>
 
-      <section class="legend-bar">
-        <div><span class="legend-dot running"></span> RUNNING</div>
-        <div><span class="legend-dot breakdown"></span> BREAKDOWN</div>
-        <div><span class="legend-dot maintenance"></span> MAINTENANCE</div>
-        <div><span class="legend-dot standby"></span> STANDBY</div>
-        <div class="legend-source">Sumber: Google Sheets • auto refresh <span id="refreshSeconds">60</span> detik</div>
+      <section class="toolbar">
+        <div class="legend">
+          <span><i class="legend-dot running"></i>Running</span>
+          <span><i class="legend-dot standby"></i>Standby</span>
+          <span><i class="legend-dot maintenance"></i>Maintenance</span>
+          <span><i class="legend-dot breakdown"></i>Breakdown</span>
+        </div>
+        <div class="source-note">Google Sheets • refresh otomatis <span id="refreshLabel">60</span> detik</div>
       </section>
 
       <section id="notice" class="notice hidden"></section>
       <section id="loading" class="loading-grid">
-        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        <div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div><div class="loading-card"></div>
       </section>
+      <section id="siteGrid" class="site-grid hidden"></section>
+      <section id="reportWrap" class="report-wrap hidden"></section>
 
-      <section id="dashboardGrid" class="dashboard-grid hidden"></section>
-
-      <section id="debugPanel" class="debug-panel hidden">
-        <h2>Parser diagnostic</h2>
-        <pre id="debugText"></pre>
-      </section>
+      <details id="diagnostic" class="diagnostic hidden">
+        <summary>Diagnostic data</summary>
+        <pre id="diagnosticText"></pre>
+      </details>
     </main>
 
-    <footer>SAFETY FIRST</footer>
+    <footer><span>SAFETY FIRST</span><span id="sheetNameFooter"></span></footer>
   </div>
-
-  <dialog id="photoDialog">
-    <button id="photoClose" class="dialog-close" type="button">×</button>
-    <img id="photoLarge" alt="Foto site" />
-    <div id="photoCaption"></div>
-  </dialog>
 
   <script src="config.js"></script>
   <script src="app.js"></script>

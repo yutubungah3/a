@@ -1,66 +1,124 @@
-# Daily Breakdown Unit – Netlify v3
+# Daily Breakdown Unit v4 — Netlify + Google Sheets
 
-Versi ini dibuat khusus untuk Google Sheet yang berbentuk **dashboard visual**, bukan tabel database.
+Versi ini sengaja **tidak membaca `pubhtml`**. Google Sheet Anda menggunakan warna sel sebagai status unit, sehingga cara yang paling stabil adalah membaca **nilai dan background cell langsung** dengan Google Apps Script.
 
-## Perubahan penting v3
+## 1. Pasang Apps Script di spreadsheet ASLI
 
-- Membaca `pubhtml` Google Sheets secara langsung melalui Netlify proxy.
-- Mendeteksi blok `PORT ...` sebagai site.
-- Mendeteksi kode unit seperti `FC 002`, `FCBIN 01`, `CLBA 01`, `FCBN 05`, dll.
-- Membaca warna sel di samping unit sebagai status:
-  - Hijau = RUNNING
-  - Merah = BREAKDOWN
-  - Oranye = MAINTENANCE
-  - Abu-abu = STANDBY
-- Mengambil foto yang sudah ada di dashboard Google Sheet bila URL gambarnya tersedia pada HTML published.
-- Mencoba membaca KPI dan Breakdown Report langsung dari layout Sheet.
-- Auto refresh setiap 60 detik.
-- Jika tab default tidak berisi unit, parser mencoba mendeteksi tab/gid lain dari published workbook.
+1. Buka Google Spreadsheet asli (bukan halaman `pubhtml`).
+2. Pilih **Extensions / Ekstensi → Apps Script**.
+3. Hapus isi `Code.gs` bawaan.
+4. Copy seluruh isi file `apps-script/Code.gs` dari paket ini.
+5. Paste ke Apps Script lalu **Save**.
+6. Dari dropdown fungsi di toolbar Apps Script, pilih `buildDashboardData_` lalu klik **Run** satu kali.
+7. Google akan meminta izin membaca spreadsheet. Setujui izin untuk spreadsheet ini.
 
-## Cara deploy manual di Netlify
+> Script hanya membaca nilai, warna sel, formula IMAGE, dan struktur sheet. Ia tidak mengubah data unit.
 
-1. Extract `daily-breakdown-monitoring-v3.zip`.
-2. Drag **isi folder hasil extract** ke Netlify Drop / Deploy manually.
-3. Pastikan file `_redirects` berada sejajar dengan `index.html`.
-4. Setelah deploy, buka:
+## 2. Deploy Apps Script sebagai Web App
 
-   `https://NAMA-SITE.netlify.app/sheet-html`
+1. Klik **Deploy → New deployment**.
+2. Klik ikon gear / Select type → **Web app**.
+3. Description: `Daily Breakdown API`.
+4. **Execute as:** Me / saya (pemilik script).
+5. **Who has access:** Anyone / siapa saja yang memiliki akses ke web app. Pada beberapa akun tertulis `Anyone` atau `Anyone, even anonymous`.
+6. Klik **Deploy**.
+7. Copy **Web app URL** yang berakhir dengan `/exec`.
 
-   Jika terlihat halaman/table Google Sheet, proxy sudah bekerja.
-5. Buka halaman utama website.
+Contoh:
 
-## Debug bila unit belum muncul
+`https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec`
 
-Tambahkan `?debug=1` di belakang URL:
+Jangan gunakan URL `/dev` karena itu hanya untuk test deployment.
 
-`https://NAMA-SITE.netlify.app/?debug=1`
+## 3. Tempel URL ke website
 
-Di bawah dashboard akan muncul `Parser diagnostic` yang berisi site, unit, cell yang terbaca, dan tab/gid yang dicoba. Kirim bagian ini jika masih ada kode unit tertentu yang belum terdeteksi.
-
-## Memaksa GID tab tertentu
-
-Jika Anda tahu GID tab yang berisi dashboard, buka `config.js`:
+Buka `config.js` dan isi:
 
 ```js
-sheetGid: "123456789",
+appsScriptUrl: "https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxx/exec",
 ```
 
-Jika kosong, parser mencoba tab default dan mencari tab lain secara otomatis bila unit belum ditemukan.
+Simpan file.
 
-## Logo perusahaan dan sertifikasi
+## 4. Upload ke Netlify
 
-Simpan logo ke folder `assets`, misalnya:
+Upload/drag seluruh isi folder `daily-breakdown-monitoring-v4` ke Netlify. Versi ini **murni static site**, tidak membutuhkan Netlify Function dan tidak membutuhkan `_redirects`.
 
-- `assets/logo-company.png`
-- `assets/logo-cert.png`
+Jika sebelumnya memakai v3, lakukan deploy baru dari folder v4 hasil extract.
 
-Kemudian ubah `config.js`:
+## 5. Status unit
+
+Apps Script membaca warna background di dekat kode unit:
+
+- Hijau → `RUNNING`
+- Merah → `BREAKDOWN`
+- Abu-abu / blue-gray → `STANDBY`
+- Oranye → `MAINTENANCE`
+
+Kode seperti `FC 002`, `CL 001`, `FCBIN 01`, `CLBIN 01`, `FCBK 01`, `FCBE 01`, `FCBN 05`, dll dideteksi otomatis.
+
+Script juga mencari blok yang judulnya dimulai `PORT ` dan bagian `BREAKDOWN REPORT`.
+
+## 6. Jika tab dashboard tidak otomatis ditemukan
+
+Di `apps-script/Code.gs`, ubah:
 
 ```js
-companyLogo: "assets/logo-company.png",
-certificationLogo: "assets/logo-cert.png"
+SHEET_NAME: '',
 ```
 
-## Foto site / unit
+menjadi nama tab persis, contoh:
 
-Versi v3 akan mencoba menggunakan foto yang sudah ditampilkan di Google Sheet published. Bila Google tidak mengekspor URL foto pada HTML published, website menampilkan placeholder. Dalam kondisi itu foto bisa dibuat lebih stabil dengan kolom/link gambar khusus, tetapi tidak diperlukan untuk deteksi unit/status.
+```js
+SHEET_NAME: 'DAILY BREAKDOWN',
+```
+
+Setelah mengubah Code.gs, lakukan **Deploy → Manage deployments → Edit → New version → Deploy**. URL `/exec` tetap dapat digunakan.
+
+## 7. Debug
+
+Setelah website live, buka:
+
+`https://nama-site.netlify.app/?debug=1`
+
+Bagian `Diagnostic data` akan memperlihatkan:
+
+- nama spreadsheet dan tab yang dibaca;
+- jumlah baris/kolom;
+- header PORT yang ditemukan;
+- semua unit + status hasil deteksi;
+- KPI;
+- Breakdown Report.
+
+Ini jauh lebih mudah diperbaiki daripada parser HTML karena kita melihat data Google Sheets yang sebenarnya.
+
+## 8. Menambahkan foto site
+
+Cara paling sederhana:
+
+1. Upload foto ke Google Drive.
+2. Share → `Anyone with the link` sebagai Viewer jika foto memang boleh ditampilkan pada website.
+3. Copy link Drive.
+4. Di `config.js`, tambahkan:
+
+```js
+sitePhotos: {
+  "PORT SEJIDUA": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+  "PORT BCMP SERONGGA": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+  "PORT BATAM": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+  "PORT BATU ENGAU": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+  "PORT BUNATI": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+}
+```
+
+Website otomatis mengubah link Google Drive tersebut menjadi thumbnail.
+
+Alternatif: jika foto dalam spreadsheet menggunakan formula `=IMAGE("https://...")`, script akan mencoba mengambil URL tersebut otomatis.
+
+## 9. Update otomatis
+
+Admin tetap mengedit Google Sheet seperti biasa. Website meminta data baru setiap 60 detik. Untuk mengubah interval, edit `refreshMs` di `config.js`.
+
+## Kenapa v4 lebih stabil?
+
+`pubhtml` ditujukan untuk menampilkan spreadsheet. Struktur HTML/class CSS Google dapat berubah dan status warna tidak selalu mudah dipetakan. Apps Script menggunakan API Spreadsheet (`getDisplayValues()` dan `getBackgrounds()`), sehingga website menerima nilai dan warna cell langsung dari file aslinya.
