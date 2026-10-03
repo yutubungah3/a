@@ -1,63 +1,90 @@
-# Daily Breakdown Unit — versi diperbaiki dari project awal
+# Daily Breakdown Unit — V5
 
-Versi ini mempertahankan tampilan project awal dan memperbaiki cara membaca Google Sheet.
+Versi ini mempertahankan pembacaan Google Sheet yang sudah berhasil mendeteksi 35 unit, tetapi UI diubah menjadi dashboard kartu per site.
 
-## Kenapa versi lama tidak mendeteksi unit
+## Status
+Website hanya menampilkan 3 status unit:
 
-Project awal membaca URL CSV. CSV hanya membawa teks/angka, sedangkan dashboard Google Sheet Anda memakai warna cell sebagai indikator status. Karena warna hilang saat diekspor ke CSV, parser lama tidak menemukan RUNNING / STANDBY / BREAKDOWN.
+- **Running**
+- **Standby**
+- **Breakdown**
 
-Versi ini membaca halaman `Publish to web` (`pubhtml`) melalui proxy Netlify, lalu membaca:
+Jika spreadsheet berisi `Maintenance`, `Service`, `Perawatan`, `Repair`, `PM`, atau warna indikator oranye/kuning, website otomatis memasukkannya sebagai **Breakdown**.
 
-- nama site seperti `PORT SEJIDUA`, `PORT BATAM`, dll.;
-- kode unit seperti `FC 002`, `FCBIN 01`, `FCBK 01`, `FCBE 01`, `FCBN 05`, dll.;
-- warna cell di sebelah kode unit;
-- merah = Breakdown;
-- hijau = Running;
-- abu-abu / biru abu-abu = Standby;
-- oranye / kuning = Maintenance;
-- Breakdown Report untuk melengkapi keterangan unit.
+Availability dihitung sebagai:
 
-Tidak perlu membuat tab `WEB_DATA` dan tidak perlu memasang Apps Script.
+`(Running + Standby) / Total Unit × 100%`
+
+## Menambahkan foto unit — cara termudah
+
+1. Buka folder `assets/photos/`.
+2. Masukkan foto unit dalam JPG.
+3. Ubah nama file mengikuti kode unit: huruf kecil dan spasi menjadi tanda minus.
+
+Contoh:
+
+- `FC 002` → `assets/photos/fc-002.jpg`
+- `FC 005` → `assets/photos/fc-005.jpg`
+- `FCBIN 01` → `assets/photos/fcbin-01.jpg`
+- `CLBA 01` → `assets/photos/clba-01.jpg`
+- `FCBN 05` → `assets/photos/fcbn-05.jpg`
+
+Website juga mencoba file `.png` dan `.webp` dengan pola nama yang sama.
+
+Setelah foto ditambahkan, deploy ulang folder ke Netlify. Tidak perlu mengubah `app.js`.
+
+## Menambahkan foto dari Google Drive
+
+Jika ingin memakai foto dari Google Drive, buka:
+
+`assets/js/unit-photos.js`
+
+Isi seperti berikut:
+
+```js
+window.UNIT_PHOTOS = {
+  "FC 002": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+  "FCBN 05": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+};
+```
+
+Untuk setiap foto Drive:
+
+1. Upload foto ke Google Drive.
+2. Klik **Share / Bagikan**.
+3. Pada **General access**, pilih **Anyone with the link / Siapa saja yang memiliki link**.
+4. Copy link dan paste ke `unit-photos.js` sesuai kode unit.
+5. Deploy ulang ke Netlify.
+
+Link Drive akan diubah otomatis menjadi URL thumbnail oleh website.
+
+## Jika nanti spreadsheet dibuat tabel
+
+Parser tabel juga sudah mengenali kolom foto bernama salah satu dari:
+
+- `FOTO`
+- `FOTO UNIT`
+- `PHOTO`
+- `IMAGE`
+- `IMAGE URL`
+- `FOTO URL`
+- `PHOTO URL`
+
+Jadi bila suatu saat data unit dipindahkan ke format tabel, foto juga dapat dibaca dari kolom tersebut.
 
 ## Deploy ke Netlify
 
-1. Extract ZIP.
-2. Pastikan `index.html`, `_redirects`, `netlify.toml`, folder `assets`, dan file ini berada dalam satu folder utama.
-3. Drag folder utama tersebut ke Netlify Deploys.
-4. Setelah deploy, buka website seperti biasa.
+Extract ZIP, lalu deploy folder yang berisi langsung:
 
-Netlify akan mem-proxy dua alamat:
+- `index.html`
+- `_redirects`
+- `netlify.toml`
+- folder `assets`
 
-- `/sheet-html` → halaman Publish to web yang mempertahankan formatting/warna.
-- `/sheet-csv` → CSV sebagai fallback.
+Google Sheet tetap menjadi sumber status unit. Foto lokal berubah hanya saat project dideploy ulang.
 
-## Tes koneksi
+## Diagnostic
 
-Setelah deploy, buka:
+Buka website dengan `?debug=1` bila ingin melihat parser diagnostic, misalnya:
 
-`https://NAMA-SITE.netlify.app/sheet-html`
-
-Jika berhasil, akan terlihat halaman/tabel Google Sheet.
-
-Lalu buka:
-
-`https://NAMA-SITE.netlify.app/?debug=1`
-
-Di bagian paling bawah akan muncul diagnostic berisi:
-
-- jumlah tabel yang ditemukan;
-- nama site yang terdeteksi;
-- jumlah kandidat unit;
-- berapa status yang berhasil dibaca dari warna;
-- warna CSS yang ditemukan;
-- unit yang belum memiliki status.
-
-Mode debug ini dibuat khusus agar jika ada satu warna Google yang belum masuk klasifikasi, warna persisnya bisa langsung diketahui dan ditambahkan tanpa mengubah struktur spreadsheet.
-
-## Update harian
-
-Admin site tetap mengubah Google Sheet yang sama. Website melakukan refresh setiap 5 menit dan tombol **Muat ulang** dapat dipakai untuk memaksa pembacaan ulang.
-
-## Foto unit/site
-
-Project ini sengaja belum mengubah bagian foto agar perbaikan fokus ke masalah deteksi data. Setelah unit dan status sudah terbaca benar, foto dapat ditambahkan tanpa mengubah mekanisme status.
+`https://nama-site.netlify.app/?debug=1`

@@ -34,10 +34,9 @@ const CONFIG = {
 /* ---------- definisi status (urutan tetap) ---------- */
 
 const STATUSES = [
-  { key: 'running',     label: 'Running',     icon: 'check',  tone: 'good' },
-  { key: 'standby',     label: 'Standby',     icon: 'pause',  tone: 'warning' },
-  { key: 'maintenance', label: 'Maintenance', icon: 'wrench', tone: 'serious' },
-  { key: 'breakdown',   label: 'Breakdown',   icon: 'alert',  tone: 'critical' },
+  { key: 'running',   label: 'Running',   icon: 'check', tone: 'good' },
+  { key: 'standby',   label: 'Standby',   icon: 'pause', tone: 'warning' },
+  { key: 'breakdown', label: 'Breakdown', icon: 'alert', tone: 'critical' },
 ];
 
 const TONE_VAR = {
@@ -56,8 +55,9 @@ const EXACT_STATUS = {
   STANDBY: 'standby', 'STAND BY': 'standby', IDLE: 'standby', SIAP: 'standby',
   MENUNGGU: 'standby', READY: 'standby',
 
-  MAINTENANCE: 'maintenance', PERAWATAN: 'maintenance', SERVICE: 'maintenance',
-  SERVIS: 'maintenance', PERBAIKAN: 'maintenance', REPAIR: 'maintenance', PM: 'maintenance',
+  // Maintenance diperlakukan sama dengan Breakdown sesuai kebutuhan dashboard.
+  MAINTENANCE: 'breakdown', PERAWATAN: 'breakdown', SERVICE: 'breakdown',
+  SERVIS: 'breakdown', PERBAIKAN: 'breakdown', REPAIR: 'breakdown', PM: 'breakdown',
 
   BREAKDOWN: 'breakdown', BD: 'breakdown', RUSAK: 'breakdown', DOWN: 'breakdown',
   MATI: 'breakdown', TROUBLE: 'breakdown', GAGAL: 'breakdown',
@@ -67,7 +67,7 @@ const EXACT_STATUS = {
 const STATUS_WORDS = [
   [/operas|operation|running|beroperasi|jalan|normal|\bok\b/i, 'running'],
   [/stand\s?by|siap|idle|menunggu|ready/i, 'standby'],
-  [/maintenance|perawatan|service|servis|perbaikan|repair|\bpm\b/i, 'maintenance'],
+  [/maintenance|perawatan|service|servis|perbaikan|repair|\bpm\b/i, 'breakdown'],
   [/break\s?down|\bbd\b|rusak|down|mati|trouble|gagal/i, 'breakdown'],
 ];
 
@@ -90,7 +90,7 @@ const SAMPLE_ROWS = [
   ['2026-10-03', 'Pit Utara', 'EX-2002', 'Excavator PC1250', 'Breakdown', 'Hose hidrolik boom pecah', '5.25', '15120', 'Dedi', 'Tunggu part'],
   ['2026-10-03', 'Pit Utara', 'DT-3001', 'Dump Truck HD465', 'Running', '', '0', '24510', 'Rahmat', 'Hauling OB'],
   ['2026-10-03', 'Pit Utara', 'DT-3002', 'Dump Truck HD785', 'Standby', '', '0', '22180', '', 'Tunggu operator'],
-  ['2026-10-03', 'Pit Selatan', 'EX-2003', 'Excavator PC2000', 'Maintenance', '', '0', '19240', 'Bambang', 'Service 500 jam'],
+  ['2026-10-03', 'Pit Selatan', 'EX-2003', 'Excavator PC2000', 'Breakdown', '', '0', '19240', 'Bambang', 'Service 500 jam'],
   ['2026-10-03', 'Pit Selatan', 'DT-3003', 'Dump Truck HD465', 'Breakdown', 'Turbo', '2.5', '20880', 'Joko', ''],
   ['2026-10-03', 'Pit Selatan', 'DT-3004', 'Dump Truck HD785', 'Running', '', '0', '23760', 'Sari', ''],
   ['2026-10-03', 'Pit Selatan', 'BD-5001', 'Bulldozer D85', 'Standby', '', '0', '14020', '', ''],
@@ -155,6 +155,77 @@ function escapeHtml(s) {
   ));
 }
 
+function photoSlug(code) {
+  return String(code || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function driveImageUrl(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  const m = raw.match(/drive\.google\.com\/file\/d\/([^/?#]+)/i)
+    || raw.match(/[?&]id=([^&#]+)/i);
+  if (m && m[1]) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w1200`;
+  return raw;
+}
+
+function unitPhotoCandidates(unit) {
+  const map = window.UNIT_PHOTOS || {};
+  const code = String(unit.code || '').trim();
+  const mapped = map[code] || map[norm(code)] || unit.photo || '';
+  const slug = photoSlug(code);
+  const items = [
+    driveImageUrl(mapped),
+    `assets/photos/${slug}.jpg`,
+    `assets/photos/${slug}.png`,
+    `assets/photos/${slug}.webp`,
+  ].filter(Boolean);
+  return [...new Set(items)];
+}
+
+function photoPlaceholderMarkup(code) {
+  return `<span class="photo-placeholder" aria-hidden="true">
+    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.5h16v13H4z"/><circle cx="9" cy="10" r="2"/><path d="m5.5 17 4.2-4 3 2.7 2.3-2.2 3.5 3.5"/></svg><br>${escapeHtml(code)}</span>
+  </span>`;
+}
+
+function unitPhotoMarkup(unit) {
+  const candidates = unitPhotoCandidates(unit);
+  const payload = encodeURIComponent(JSON.stringify(candidates));
+  return `<button class="unit-thumb" type="button" data-unit-open="${escapeHtml(unit.code)}" aria-label="Lihat ${escapeHtml(unit.code)}">
+    <img data-photo-candidates="${payload}" alt="Foto ${escapeHtml(unit.code)}" hidden>
+    ${photoPlaceholderMarkup(unit.code)}
+  </button>`;
+}
+
+function hydrateUnitPhotos(root = document) {
+  root.querySelectorAll('img[data-photo-candidates]').forEach((img) => {
+    if (img.dataset.photoReady === '1') return;
+    img.dataset.photoReady = '1';
+    let list = [];
+    try { list = JSON.parse(decodeURIComponent(img.dataset.photoCandidates || '')) || []; } catch (_) {}
+    let idx = 0;
+    const next = () => {
+      if (idx >= list.length) {
+        img.hidden = true;
+        return;
+      }
+      img.hidden = false;
+      img.src = list[idx++];
+    };
+    img.addEventListener('load', () => {
+      img.hidden = false;
+      const ph = img.nextElementSibling;
+      if (ph) ph.hidden = true;
+    });
+    img.addEventListener('error', () => next());
+    next();
+  });
+}
+
 
 /* ===========================================================
    Parser Publish-to-web HTML
@@ -164,7 +235,7 @@ function escapeHtml(s) {
  * Google Sheets "Publish to web" mengirim format warna sebagai CSS class
  * (misalnya .s12 { background-color:#00b050 }). Karena itu kita membaca
  * tabel HTML beserta CSS-nya dan mengubah warna cell status menjadi
- * running / standby / maintenance / breakdown.
+ * running / standby / breakdown (maintenance digabung ke breakdown).
  */
 
 function cleanText(v) {
@@ -247,8 +318,8 @@ function statusFromColor(raw) {
   /* merah */
   if ((h <= 18 || h >= 342) && s >= 0.38 && l < 0.83) return 'breakdown';
 
-  /* oranye / kuning */
-  if (h >= 18 && h <= 68 && s >= 0.35 && l < 0.84) return 'maintenance';
+  /* oranye / kuning: diperlakukan sebagai Breakdown */
+  if (h >= 18 && h <= 68 && s >= 0.35 && l < 0.84) return 'breakdown';
 
   /* hijau */
   if (h >= 70 && h <= 175 && s >= 0.28 && l < 0.86) return 'running';
@@ -417,7 +488,7 @@ function readSummaryFromGrid(grid) {
     'TOTAL UNIT': 'totalunit',
     RUNNING: 'running',
     STANDBY: 'standby',
-    MAINTENANCE: 'maintenance',
+    MAINTENANCE: 'breakdown',
     BREAKDOWN: 'breakdown',
     AVAILABILITY: 'availability',
   };
@@ -437,7 +508,10 @@ function readSummaryFromGrid(grid) {
         const n = parseNum(String(below.text).replace('%', ''));
         if (n != null) val = n;
       }
-      if (val != null) summary[key] = val;
+      if (val != null) {
+        if (key === 'breakdown' && summary[key] != null) summary[key] += val;
+        else summary[key] = val;
+      }
     }
   }
   return summary;
@@ -575,7 +649,7 @@ function debugPanel(info) {
     pre = document.createElement('pre');
     pre.id = 'debug-panel';
     pre.style.cssText = 'margin-top:16px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-1);white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;';
-    document.querySelector('.wrap').appendChild(pre);
+    document.querySelector('.app-shell').appendChild(pre);
   }
   pre.textContent = JSON.stringify(info || {}, null, 2);
 }
@@ -724,6 +798,11 @@ function parseLayout(grid) {
     }
   }
 
+  if (meta.summary.maintenance != null) {
+    meta.summary.breakdown = (meta.summary.breakdown || 0) + meta.summary.maintenance;
+    delete meta.summary.maintenance;
+  }
+
   const units = [];
   const seen = new Set();
   for (const sec of sections) {
@@ -781,6 +860,7 @@ const COLUMN_RULES = {
   hm:     [/^hm$|^hour\s*meter$|^jam\s*meter$/i],
   op:     [/^operator$|^driver$|^pengemudi$|^crew$/i],
   note:   [/^keterangan$|^catatan$|^note$|^remark$/i],
+  photo:  [/^foto$|^foto unit$|^photo$|^image$|^image url$|^foto url$|^photo url$/i],
 };
 
 function buildColumnMap(header) {
@@ -838,6 +918,7 @@ function parseTidy(grid, headerIdx) {
       hm: map.hm != null ? parseNum(r[map.hm]) : null,
       operator: String(r[map.op] ?? '').trim(),
       note: String(r[map.note] ?? '').trim(),
+      photo: String(r[map.photo] ?? '').trim(),
       date: d,
     });
   }
@@ -866,7 +947,7 @@ const state = {
   sort: { key: 'status', dir: 'asc' },
 };
 
-const STATUS_RANK = { breakdown: 0, maintenance: 1, standby: 2, running: 3, unknown: 4 };
+const STATUS_RANK = { breakdown: 0, standby: 1, running: 2, unknown: 3 };
 
 function visibleUnits() {
   const { site, status, q } = state.filter;
@@ -910,12 +991,18 @@ function countBy(list) {
 
 /* ---------- render ---------- */
 
+function statusInfo(key) {
+  return STATUSES.find((s) => s.key === key)
+    || { key: 'unknown', label: 'Belum terbaca', icon: 'alert', tone: 'warning' };
+}
+
 function render() {
   renderStatusbar();
   renderFilters();
   renderKpis();
-  renderSiteTable();
-  renderTable();
+  renderSiteCards();
+  renderBreakdownReport();
+  hydrateUnitPhotos();
 }
 
 function renderStatusbar() {
@@ -925,163 +1012,156 @@ function renderStatusbar() {
   const cached = state.source === 'cache';
   const parts = [];
 
-  const sourceLabel = sample ? 'Data contoh' : failed ? 'Koneksi gagal' : cached ? 'Data tersimpan terakhir' : 'Google Sheets live';
+  const sourceLabel = sample ? 'Data contoh' : failed ? 'Koneksi gagal' : cached ? 'Data terakhir tersimpan' : 'Google Sheets live';
   const sourceTone = (sample || failed || cached) ? 'warning' : 'good';
   parts.push(`<span class="pill"><span class="dotmark ${sourceTone}"></span>${sourceLabel}</span>`);
-  if (state.meta.title) parts.push(`<strong>${escapeHtml(state.meta.title)}</strong>`);
-  if (state.meta.date) parts.push(`<span>${escapeHtml(state.meta.date)}</span>`);
 
+  if (state.meta.date) parts.push(`<span class="pill">${escapeHtml(state.meta.date)}</span>`);
   if (state.updatedAt) {
     const ageH = (Date.now() - state.updatedAt.getTime()) / 36e5;
-    parts.push(`<span>Diupdate ${escapeHtml(state.updatedAt.toLocaleString('id-ID', {
+    parts.push(`<span>Update ${escapeHtml(state.updatedAt.toLocaleString('id-ID', {
       day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
     }))}</span>`);
     if (!sample && ageH > CONFIG.STALE_HOURS) {
       parts.push(`<span class="pill"><span class="dotmark warning"></span>Data usang &gt; ${CONFIG.STALE_HOURS} jam</span>`);
     }
   }
-
-  parts.push(`<span class="pill">${state.units.length} unit</span>`);
-  el.innerHTML = parts.join(' <span style="color:var(--baseline)">·</span> ');
+  parts.push(`<span>${state.units.length} unit terbaca</span>`);
+  el.innerHTML = parts.join('');
 }
 
 function renderFilters() {
   const sites = [...new Set(state.units.map((u) => u.site))].sort((a, b) => a.localeCompare(b, 'id'));
   const sel = $('#f-site');
   sel.innerHTML = ['<option value="__all__">Semua site</option>',
-    ...sites.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)].join('');
+    ...sites.map((site) => `<option value="${escapeHtml(site)}">${escapeHtml(site)}</option>`)].join('');
   sel.value = sites.includes(state.filter.site) ? state.filter.site : '__all__';
   state.filter.site = sel.value;
 
   const st = $('#f-status');
-  const statusOptions = STATUSES.map((s) => `<option value="${s.key}">${s.label}</option>`);
-  if (state.units.some((u) => u.status === 'unknown')) {
-    statusOptions.push('<option value="unknown">Belum terbaca</option>');
-  }
+  const statusOptions = STATUSES.map((status) => `<option value="${status.key}">${status.label}</option>`);
+  if (state.units.some((u) => u.status === 'unknown')) statusOptions.push('<option value="unknown">Belum terbaca</option>');
   st.innerHTML = ['<option value="__all__">Semua status</option>', ...statusOptions].join('');
   st.value = [...STATUSES.map((x) => x.key), 'unknown', '__all__'].includes(state.filter.status)
     ? state.filter.status : '__all__';
+
+  const shown = visibleUnits().length;
+  $('#filter-summary').textContent = shown === state.units.length ? `${shown} unit` : `${shown} dari ${state.units.length} unit`;
 }
 
 function renderKpis() {
   const list = visibleUnits();
-  const total = list.length || 1;
+  const total = list.length;
+  const base = total || 1;
   const c = countBy(list);
-  const downtime = list.reduce((a, u) => a + (u.downtime || 0), 0);
-  const avail = ((c.running + c.standby) / total) * 100;
+  const avail = ((c.running + c.standby) / base) * 100;
 
-  const cards = STATUSES.map((s) => {
-    const n = c[s.key];
-    return `<div class="kpi">
-        <div class="label">${icon(s.icon)}<span class="sw" style="color:${TONE_VAR[s.tone]}">●</span>${s.label}</div>
-        <div class="value" style="color:${TONE_VAR[s.tone]}">${n}<span class="unit">unit</span></div>
-        <div class="foot">${numFmt((n / total) * 100, 0)}% dari ${list.length} unit</div>
-      </div>`;
-  });
-
-  cards.push(`
-    <div class="kpi">
-      <div class="label">Total unit</div>
-      <div class="value">${list.length}</div>
-      <div class="foot">terfilter</div>
-    </div>
-    <div class="kpi">
-      <div class="label">Availability</div>
-      <div class="value">${numFmt(avail, 1)}<span class="unit">%</span></div>
-      <div class="foot">running + standby</div>
-    </div>`);
-
-  if (downtime > 0) {
-    cards.splice(4, 0, `
-      <div class="kpi">
-        <div class="label">Total downtime</div>
-        <div class="value">${numFmt(downtime, 1)}<span class="unit">jam</span></div>
-        <div class="foot">akumulasi terfilter</div>
-      </div>`);
-  }
-
-  $('#kpis').innerHTML = cards.join('');
-}
-
-function renderSiteTable() {
-  const panel = $('#panel-site');
-  if (state.units.length === 0) { panel.hidden = true; return; }
-  panel.hidden = false;
-
-  const sites = [...new Set(state.units.map((u) => u.site))].sort((a, b) => a.localeCompare(b, 'id'));
-  const rows = sites.map((s) => {
-    const list = state.units.filter((u) => u.site === s);
-    const c = countBy(list);
-    const avail = ((c.running + c.standby) / (list.length || 1)) * 100;
-    return `<tr>
-      <td class="code">${escapeHtml(s)}</td>
-      ${STATUSES.map((x) => `<td class="num">${c[x.key] || '–'}</td>`).join('')}
-      <td class="num">${list.length}</td>
-      <td class="num">${numFmt(avail, 1)}%</td>
-    </tr>`;
-  }).join('');
-
-  const tot = countBy(state.units);
-  const totAvail = ((tot.running + tot.standby) / (state.units.length || 1)) * 100;
-
-  $('#s-body').innerHTML = rows + `<tr class="totalrow">
-      <td class="code">Semua site</td>
-      ${STATUSES.map((x) => `<td class="num">${tot[x.key] || '–'}</td>`).join('')}
-      <td class="num">${state.units.length}</td>
-      <td class="num">${numFmt(totAvail, 1)}%</td>
-    </tr>`;
-}
-
-function renderTable() {
-  const list = visibleUnits();
-  const head = $('#t-head');
-  const body = $('#t-body');
-
-  const hasDt = CONFIG.DOWNTIME_COL === 'auto'
-    ? state.units.some((u) => u.downtime) : CONFIG.DOWNTIME_COL;
-  const hasHm = CONFIG.HM_COL === 'auto'
-    ? state.units.some((u) => u.hm != null) : CONFIG.HM_COL;
-  const hasCause = state.units.some((u) => u.cause);
-
-  const cols = [
-    { key: 'code', label: 'Unit' },
-    { key: 'status', label: 'Status' },
-    { key: 'site', label: 'Site' },
+  const cards = [
+    { label: 'Total Unit', value: total, unit: '', foot: state.filter.site === '__all__' ? 'seluruh site' : state.filter.site, color: 'var(--blue)', soft: 'rgba(29,127,215,.10)', icon: 'check' },
+    { label: 'Running', value: c.running, unit: 'unit', foot: `${numFmt((c.running / base) * 100, 0)}% dari unit terfilter`, color: 'var(--green)', soft: 'var(--green-soft)', icon: 'check' },
+    { label: 'Standby', value: c.standby, unit: 'unit', foot: `${numFmt((c.standby / base) * 100, 0)}% dari unit terfilter`, color: 'var(--amber)', soft: 'var(--amber-soft)', icon: 'pause' },
+    { label: 'Breakdown', value: c.breakdown, unit: 'unit', foot: `${numFmt((c.breakdown / base) * 100, 0)}% dari unit terfilter`, color: 'var(--red)', soft: 'var(--red-soft)', icon: 'alert' },
+    { label: 'Availability', value: numFmt(avail, 1), unit: '%', foot: 'running + standby', color: 'var(--blue)', soft: 'rgba(29,127,215,.10)', icon: 'check' },
   ];
-  if (hasCause) cols.push({ key: 'cause', label: 'Penyebab / Keterangan' });
-  if (hasDt) cols.push({ key: 'downtime', label: 'Downtime (jam)', num: true });
-  if (hasHm) cols.push({ key: 'hm', label: 'HM', num: true });
 
-  head.innerHTML = '<tr>' + cols.map((c) => {
-    const active = state.sort.key === c.key;
-    const arrow = active ? `<span class="arrow">${state.sort.dir === 'asc' ? '▲' : '▼'}</span>` : '';
-    return `<th class="${c.num ? 'num' : ''} sortable" data-sort="${c.key}" tabindex="0" role="button">${c.label} ${arrow}</th>`;
-  }).join('') + '</tr>';
+  $('#kpis').innerHTML = cards.map((card) => `<article class="kpi" style="--kpi-color:${card.color};--kpi-soft:${card.soft}">
+    <div class="label"><span>${card.label}</span><span class="kpi-icon">${icon(card.icon)}</span></div>
+    <div class="value">${card.value}${card.unit ? `<span class="unit">${card.unit}</span>` : ''}</div>
+    <div class="foot">${escapeHtml(card.foot)}</div>
+  </article>`).join('');
+}
+
+function renderSiteCards() {
+  const list = visibleUnits();
+  const grid = $('#site-grid');
+  const sites = [...new Set(list.map((u) => u.site))].sort((a, b) => a.localeCompare(b, 'id'));
+  $('#site-section-note').textContent = `${sites.length} site · ${list.length} unit`;
 
   if (!list.length) {
-    body.innerHTML = `<tr><td colspan="${cols.length}"><div class="empty">Tidak ada unit yang cocok dengan filter ini.</div></td></tr>`;
-    $('#panel-table').querySelector('.note').textContent = '0 unit';
+    grid.innerHTML = '<div class="empty-state">Tidak ada unit yang cocok dengan filter.</div>';
     return;
   }
 
-  const maxDt = Math.max(1, ...list.map((u) => u.downtime || 0));
+  grid.innerHTML = sites.map((site) => {
+    const units = list.filter((u) => u.site === site).sort((a, b) => a.code.localeCompare(b.code, 'id', { numeric: true }));
+    const c = countBy(units);
+    const avail = ((c.running + c.standby) / (units.length || 1)) * 100;
+    const unitRows = units.map((u) => {
+      const info = statusInfo(u.status);
+      const detail = u.cause || u.note || u.type || 'Tidak ada catatan';
+      return `<article class="unit-row ${u.status === 'breakdown' ? 'is-breakdown' : ''}" data-unit-code="${escapeHtml(u.code)}">
+        ${unitPhotoMarkup(u)}
+        <div class="unit-info">
+          <div class="unit-code">${escapeHtml(u.code)}</div>
+          <div class="unit-meta" title="${escapeHtml(detail)}">${escapeHtml(detail)}</div>
+        </div>
+        <span class="status-badge ${info.key}">${info.label}</span>
+      </article>`;
+    }).join('');
 
-  body.innerHTML = list.map((u) => {
-    const s = STATUSES.find((x) => x.key === u.status)
-      || { key: 'unknown', label: 'Belum terbaca', icon: 'alert', tone: 'warning' };
-    const sub = [u.type, u.operator].filter(Boolean).join(' · ');
-    const pct = Math.max(0, Math.min(100, ((u.downtime || 0) / maxDt) * 100));
-    return `<tr>
-      <td class="code">${escapeHtml(u.code)}${sub ? `<span class="meta">${escapeHtml(sub)}</span>` : ''}</td>
-      <td><span class="badge" style="--sc:${TONE_VAR[s.tone]}">${icon(s.icon)}${s.label}</span></td>
-      <td>${escapeHtml(u.site)}</td>
-      ${hasCause ? `<td class="cause">${u.cause ? escapeHtml(u.cause) : '<span class="empty">–</span>'}</td>` : ''}
-      ${hasDt ? `<td class="num"><div class="meter"><span>${numFmt(u.downtime, 2)}</span><span class="track"><span class="fill" style="width:${pct}%"></span></span></div></td>` : ''}
-      ${hasHm ? `<td class="num">${u.hm == null ? '–' : numFmt(u.hm)}</td>` : ''}
-    </tr>`;
+    return `<section class="site-card">
+      <header class="site-card-head">
+        <div class="site-title">
+          <h3>${escapeHtml(site)}</h3>
+          <span>${units.length} unit · Availability ${numFmt(avail, 1)}%</span>
+        </div>
+        <div class="site-mini-kpis" aria-label="Ringkasan ${escapeHtml(site)}">
+          <span class="mini-pill running" title="Running">R ${c.running}</span>
+          <span class="mini-pill standby" title="Standby">S ${c.standby}</span>
+          <span class="mini-pill breakdown" title="Breakdown">B ${c.breakdown}</span>
+        </div>
+      </header>
+      <div class="unit-list">${unitRows}</div>
+    </section>`;
   }).join('');
+}
 
-  $('#panel-table').querySelector('.note').textContent = `${list.length} unit`;
+function renderBreakdownReport() {
+  const list = visibleUnits().filter((u) => u.status === 'breakdown');
+  const panel = $('#breakdown-panel');
+  const target = $('#breakdown-list');
+  $('#breakdown-count').textContent = `${list.length} unit`;
+
+  if (!list.length) {
+    target.innerHTML = '<div class="breakdown-empty">Tidak ada unit breakdown pada filter saat ini.</div>';
+    panel.classList.add('is-clear');
+    return;
+  }
+  panel.classList.remove('is-clear');
+  target.innerHTML = list.map((u) => `<div class="breakdown-item">
+    <div class="breakdown-site">${escapeHtml(u.site)}</div>
+    <div class="breakdown-code">${escapeHtml(u.code)}</div>
+    <div class="breakdown-cause">${escapeHtml(u.cause || u.note || 'Belum ada keterangan pekerjaan/perbaikan.')}</div>
+  </div>`).join('');
+}
+
+function findUnitByCode(code) {
+  return state.units.find((u) => norm(u.code) === norm(code));
+}
+
+function openUnitDialog(code, trigger) {
+  const u = findUnitByCode(code);
+  if (!u) return;
+  const dialog = $('#unit-dialog');
+  const info = statusInfo(u.status);
+  $('#dialog-site').textContent = u.site || '';
+  $('#dialog-code').textContent = u.code || '';
+  $('#dialog-status').innerHTML = `<span class="status-badge ${info.key}">${info.label}</span>`;
+  $('#dialog-cause').textContent = u.cause || u.note || 'Belum ada keterangan untuk unit ini.';
+
+  const srcImg = trigger && trigger.querySelector('img');
+  const img = $('#dialog-photo');
+  const ph = $('#dialog-photo-placeholder');
+  if (srcImg && !srcImg.hidden && srcImg.currentSrc) {
+    img.src = srcImg.currentSrc;
+    img.hidden = false;
+    ph.hidden = true;
+  } else {
+    img.removeAttribute('src');
+    img.hidden = true;
+    ph.hidden = false;
+  }
+  if (typeof dialog.showModal === 'function') dialog.showModal();
 }
 
 /* ---------- rekonsiliasi dengan ringkasan di sheet ---------- */
@@ -1107,7 +1187,10 @@ function applyParsed(parsed, source) {
   if (!parsed || !parsed.units || !parsed.units.length) {
     throw new Error('Tidak ada unit yang terbaca dari spreadsheet.');
   }
-  state.units = parsed.units;
+  state.units = parsed.units.map((u) => ({
+    ...u,
+    status: u.status === 'maintenance' ? 'breakdown' : u.status,
+  }));
   state.meta = parsed.meta || {};
   state.mode = parsed.mode || 'unknown';
   state.source = source;
@@ -1135,7 +1218,10 @@ function restoreLastGood() {
     if (!raw) return false;
     const snap = JSON.parse(raw);
     if (!snap || !Array.isArray(snap.units) || !snap.units.length) return false;
-    state.units = snap.units;
+    state.units = snap.units.map((u) => ({
+      ...u,
+      status: u.status === 'maintenance' ? 'breakdown' : u.status,
+    }));
     state.meta = snap.meta || {};
     state.mode = snap.mode || 'cache';
     state.source = 'cache';
@@ -1238,38 +1324,32 @@ function bind() {
   let t = null;
   $('#f-q').addEventListener('input', (e) => {
     clearTimeout(t);
-    const v = e.target.value;
-    t = setTimeout(() => { state.filter.q = v; render(); }, 180);
+    const value = e.target.value;
+    t = setTimeout(() => { state.filter.q = value; render(); }, 160);
   });
 
-  const sortHandler = (e) => {
-    const th = e.target.closest('[data-sort]');
-    if (!th) return;
-    const key = th.dataset.sort;
-    if (state.sort.key === key) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
-    else { state.sort.key = key; state.sort.dir = 'asc'; }
-    render();
-  };
-  $('#t-head').addEventListener('click', sortHandler);
-  $('#t-head').addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const th = e.target.closest('[data-sort]');
-    if (th) { e.preventDefault(); th.click(); }
+  $('#site-grid').addEventListener('click', (e) => {
+    const trigger = e.target.closest('[data-unit-open]');
+    if (!trigger) return;
+    openUnitDialog(trigger.dataset.unitOpen, trigger);
   });
 
   $('#btn-reload').addEventListener('click', () => load(true));
-
   $('#btn-theme').addEventListener('click', () => {
-    const cur = document.documentElement.dataset.theme;
-    const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const next = cur ? (cur === 'dark' ? 'light' : 'dark') : (sysDark ? 'light' : 'dark');
+    const cur = document.documentElement.dataset.theme || 'light';
+    const next = cur === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
     try { localStorage.setItem('dbu-theme', next); } catch (_) {}
   });
 
+  $('#dialog-close').addEventListener('click', () => $('#unit-dialog').close());
+  $('#unit-dialog').addEventListener('click', (e) => {
+    if (e.target === $('#unit-dialog')) $('#unit-dialog').close();
+  });
+
   try {
     const saved = localStorage.getItem('dbu-theme');
-    if (saved) document.documentElement.dataset.theme = saved;
+    if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
   } catch (_) {}
 
   if (CONFIG.REFRESH_MINUTES > 0) setInterval(() => load(true), CONFIG.REFRESH_MINUTES * 60000);

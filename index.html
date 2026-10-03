@@ -1,101 +1,105 @@
 <!doctype html>
-<html lang="id" data-theme="">
+<html lang="id" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2744">
   <title>Daily Breakdown Unit</title>
-  <meta name="description" content="Monitoring harian status unit pertambangan: running, standby, maintenance, breakdown.">
+  <meta name="description" content="Dashboard monitoring harian unit Fixed Plant dari Google Sheets.">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  <div class="wrap">
-
-    <div class="top">
-      <div>
-        <h1>Daily Breakdown Unit</h1>
-        <p class="sub">Monitoring status unit harian<span class="dot">·</span>sumber: Google Sheets</p>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <button class="iconbtn" id="btn-reload" type="button">Muat ulang</button>
-        <button class="iconbtn" id="btn-theme" type="button">Tema</button>
-      </div>
-    </div>
-
-    <div id="banner"></div>
-
-    <div class="statusbar" id="statusbar"></div>
-
-    <!-- satu baris filter di atas semua yang dicakupnya -->
-    <div class="filters">
-      <div class="field">
-        <label for="f-site">Site</label>
-        <select id="f-site"></select>
-      </div>
-      <div class="field">
-        <label for="f-status">Status</label>
-        <select id="f-status"></select>
-      </div>
-      <div class="field">
-        <label for="f-q">Cari</label>
-        <input type="search" id="f-q" placeholder="kode unit, operator, penyebab…" autocomplete="off">
-      </div>
-      <div class="spacer"></div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <div style="font-size:12px; color:var(--text-muted); line-height:34px;">
-          Urut: klik judul kolom
+  <div class="app-shell">
+    <header class="hero">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <span class="brand-mark-top"></span>
+          <span class="brand-mark-mid"></span>
+          <span class="brand-mark-bottom"></span>
+        </div>
+        <div>
+          <div class="eyebrow">FIXED PLANT · DAILY OPERATION</div>
+          <h1>Daily Breakdown Unit</h1>
+          <p class="hero-sub">Monitoring kondisi unit dari Google Sheets secara ringkas, cepat, dan mudah dibaca.</p>
         </div>
       </div>
-    </div>
-
-    <div id="content">
-      <div class="kpis" id="kpis"></div>
-
-      <div class="panel" id="panel-site">
-        <header>
-          <h2>Rekap per site</h2>
-          <span class="note">seluruh unit</span>
-        </header>
-        <div class="tscroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Site</th>
-                <th class="num">Running</th>
-                <th class="num">Standby</th>
-                <th class="num">Maintenance</th>
-                <th class="num">Breakdown</th>
-                <th class="num">Total</th>
-                <th class="num">Availability</th>
-              </tr>
-            </thead>
-            <tbody id="s-body"></tbody>
-          </table>
-        </div>
+      <div class="hero-actions">
+        <button class="btn btn-secondary" id="btn-theme" type="button" aria-label="Ganti tema">Tema</button>
+        <button class="btn btn-primary" id="btn-reload" type="button">Muat ulang</button>
       </div>
+    </header>
 
-      <div class="panel" id="panel-table">
-        <header>
-          <h2>Rekap unit</h2>
-          <span class="note"></span>
-        </header>
-        <div class="tscroll">
-          <table>
-            <thead id="t-head"></thead>
-            <tbody id="t-body"></tbody>
-          </table>
+    <main id="content">
+      <div id="banner"></div>
+      <div class="statusbar" id="statusbar"></div>
+
+      <section class="kpis" id="kpis" aria-label="Ringkasan status unit"></section>
+
+      <section class="toolbar" aria-label="Filter unit">
+        <div class="toolbar-title">
+          <strong>Monitoring unit</strong>
+          <span id="filter-summary">Semua unit</span>
         </div>
-      </div>
-    </div>
+        <div class="filters">
+          <div class="field">
+            <label for="f-site">Site</label>
+            <select id="f-site"></select>
+          </div>
+          <div class="field">
+            <label for="f-status">Status</label>
+            <select id="f-status"></select>
+          </div>
+          <div class="field search-field">
+            <label for="f-q">Cari unit</label>
+            <input type="search" id="f-q" placeholder="Contoh: FCBN 05" autocomplete="off">
+          </div>
+        </div>
+      </section>
 
-    <p style="margin-top:18px; font-size:12px; color:var(--text-muted);">
-      Data dibaca langsung dari Google Sheets <em>Publish to web</em>. Untuk layout dashboard Anda,
-      status unit dibaca dari <strong>warna cell indikator</strong>: hijau = Running, abu-abu = Standby,
-      oranye = Maintenance, merah = Breakdown.
-    </p>
+      <section class="content-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">SITE OVERVIEW</span>
+            <h2>Status unit per site</h2>
+          </div>
+          <span class="section-note" id="site-section-note"></span>
+        </div>
+        <div class="site-grid" id="site-grid"></div>
+      </section>
 
+      <section class="breakdown-section" id="breakdown-panel">
+        <div class="breakdown-heading">
+          <div>
+            <span class="section-kicker">ATTENTION REQUIRED</span>
+            <h2>Breakdown Report</h2>
+          </div>
+          <span class="breakdown-count" id="breakdown-count">0 unit</span>
+        </div>
+        <div class="breakdown-list" id="breakdown-list"></div>
+      </section>
+
+      <p class="source-note">
+        Status <strong>Maintenance</strong> otomatis digabung menjadi <strong>Breakdown</strong>. Foto unit dapat diisi melalui
+        <code>assets/js/unit-photos.js</code> atau file lokal di <code>assets/photos/</code>.
+      </p>
+    </main>
   </div>
 
+  <dialog class="unit-dialog" id="unit-dialog">
+    <button class="dialog-close" id="dialog-close" type="button" aria-label="Tutup">×</button>
+    <div class="dialog-photo-wrap" id="dialog-photo-wrap">
+      <img id="dialog-photo" alt="Foto unit">
+      <div class="dialog-photo-placeholder" id="dialog-photo-placeholder">Tidak ada foto unit</div>
+    </div>
+    <div class="dialog-body">
+      <div class="dialog-site" id="dialog-site"></div>
+      <h3 id="dialog-code"></h3>
+      <div id="dialog-status"></div>
+      <p id="dialog-cause"></p>
+    </div>
+  </dialog>
+
+  <script src="assets/js/unit-photos.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>
