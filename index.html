@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d3658" />
+  <title>Daily Breakdown Unit</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="masthead">
+      <div class="brand-box">
+        <div id="companyLogoWrap" class="logo-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <img id="companyLogo" class="header-logo hidden" alt="Logo perusahaan" />
+        <div id="companyName" class="company-name">PT. DUTA SAMUDERA BERKASA</div>
+      </div>
+
+      <div class="title-box">
+        <div class="title-kicker">OPERATIONAL MONITORING</div>
+        <h1 id="pageTitle">DAILY BREAKDOWN UNIT</h1>
+        <div class="title-subrow">
+          <span id="pageSubtitle">FIXED PLANT</span>
+          <span class="separator">•</span>
+          <span id="sheetDate">Memuat data...</span>
+        </div>
+      </div>
+
+      <div class="status-box">
+        <img id="certificationLogo" class="cert-logo hidden" alt="Certification" />
+        <div class="live-card">
+          <span id="syncDot" class="live-dot"></span>
+          <div>
+            <strong id="syncStatus">Menghubungkan</strong>
+            <small id="lastSync">Google Sheets</small>
+          </div>
+        </div>
+        <button id="refreshBtn" class="refresh-btn" type="button" title="Refresh data">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="kpi-grid" aria-label="Ringkasan unit">
+        <article class="kpi-card kpi-total"><div class="kpi-label">TOTAL UNIT</div><div id="kpiTotal" class="kpi-value">–</div></article>
+        <article class="kpi-card kpi-running"><div class="kpi-label">RUNNING</div><div id="kpiRunning" class="kpi-value">–</div></article>
+        <article class="kpi-card kpi-standby"><div class="kpi-label">STANDBY</div><div id="kpiStandby" class="kpi-value">–</div></article>
+        <article class="kpi-card kpi-breakdown"><div class="kpi-label">BREAKDOWN</div><div id="kpiBreakdown" class="kpi-value">–</div></article>
+        <article class="kpi-card kpi-availability"><div class="kpi-label">AVAILABILITY</div><div id="kpiAvailability" class="kpi-value">–</div></article>
+      </section>
+
+      <section class="legend-bar">
+        <div><span class="legend-dot running"></span> RUNNING</div>
+        <div><span class="legend-dot breakdown"></span> BREAKDOWN</div>
+        <div><span class="legend-dot maintenance"></span> MAINTENANCE</div>
+        <div><span class="legend-dot standby"></span> STANDBY</div>
+        <div class="legend-source">Sumber: Google Sheets • auto refresh <span id="refreshSeconds">60</span> detik</div>
+      </section>
+
+      <section id="notice" class="notice hidden"></section>
+      <section id="loading" class="loading-grid">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </section>
+
+      <section id="dashboardGrid" class="dashboard-grid hidden"></section>
+
+      <section id="debugPanel" class="debug-panel hidden">
+        <h2>Parser diagnostic</h2>
+        <pre id="debugText"></pre>
+      </section>
+    </main>
+
+    <footer>SAFETY FIRST</footer>
+  </div>
+
+  <dialog id="photoDialog">
+    <button id="photoClose" class="dialog-close" type="button">×</button>
+    <img id="photoLarge" alt="Foto site" />
+    <div id="photoCaption"></div>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
