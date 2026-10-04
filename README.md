@@ -1,3 +1,7 @@
+# Daily Breakdown Monitoring V6.2
+
+Perbaikan V6.2: `?debug=photos` kini khusus menampilkan diagnostic foto per unit dan tidak lagi tertukar dengan diagnostic data spreadsheet.
+
 # Daily Breakdown Monitoring V5
 
 Versi UI baru berdasarkan project yang sudah berhasil membaca 35 unit dari Google Sheet.

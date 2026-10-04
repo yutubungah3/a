@@ -69,3 +69,14 @@ Di bagian bawah akan muncul diagnostic per unit. Contoh:
 ```
 
 Jika `status` adalah `not-found`, lihat daftar `tried` untuk mengetahui nama/path yang dicoba website.
+
+
+## Debug foto V6.2
+Buka `https://NAMA-SITE.netlify.app/?debug=photos`.
+Panel JSON khusus foto akan muncul dekat bagian atas. Untuk setiap unit:
+- `status: loaded` berarti foto berhasil.
+- `status: not-found` berarti seluruh URL/nama file pada `tried` gagal.
+- `configured` menunjukkan nilai dari `assets/js/unit-photos.js`.
+- `loaded` menunjukkan URL final yang benar-benar berhasil dipakai browser.
+
+`?debug=1` tetap digunakan untuk diagnostic data Google Sheet, dan tidak lagi bercampur dengan diagnostic foto.

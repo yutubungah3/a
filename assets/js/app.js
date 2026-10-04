@@ -31,6 +31,8 @@ const CONFIG = {
   HM_COL: 'auto',
 };
 
+const DEBUG_MODE = new URLSearchParams(location.search).get('debug') || '';
+
 /* ---------- definisi status (urutan tetap) ---------- */
 
 const STATUSES = [
@@ -254,23 +256,33 @@ const PHOTO_DIAGNOSTICS = {};
 function recordPhotoDiagnostic(code, patch) {
   const key = String(code || '').trim();
   PHOTO_DIAGNOSTICS[key] = { ...(PHOTO_DIAGNOSTICS[key] || {}), ...patch };
-  if (new URLSearchParams(location.search).get('debug') === 'photos') {
+  if (DEBUG_MODE === 'photos') {
     window.clearTimeout(recordPhotoDiagnostic._timer);
     recordPhotoDiagnostic._timer = window.setTimeout(renderPhotoDebugPanel, 100);
   }
 }
 
 function renderPhotoDebugPanel() {
+  if (DEBUG_MODE !== 'photos') return;
   let pre = document.querySelector('#photo-debug-panel');
   if (!pre) {
     pre = document.createElement('pre');
     pre.id = 'photo-debug-panel';
     pre.style.cssText = 'margin:16px auto;max-width:1280px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;';
-    document.querySelector('.app-shell').appendChild(pre);
+    const anchor = document.querySelector('#statusbar');
+    if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(pre, anchor.nextSibling);
+    else document.querySelector('.app-shell').appendChild(pre);
   }
-  pre.textContent = JSON.stringify(PHOTO_DIAGNOSTICS, null, 2);
+  const payload = {
+    debugMode: 'photos',
+    version: '6.2',
+    source: state.source || null,
+    unitCount: state.units ? state.units.length : 0,
+    help: 'status loaded = foto tampil; not-found = semua kandidat gagal. Periksa configured, tried, dan loaded.',
+    photos: PHOTO_DIAGNOSTICS,
+  };
+  pre.textContent = JSON.stringify(payload, null, 2);
 }
-
 function photoPlaceholderMarkup(code) {
   return `<span class="photo-placeholder" aria-hidden="true">
     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.5h16v13H4z"/><circle cx="9" cy="10" r="2"/><path d="m5.5 17 4.2-4 3 2.7 2.3-2.2 3.5 3.5"/></svg><br>${escapeHtml(code)}</span>
@@ -739,7 +751,7 @@ function parsePublishedHtml(html) {
 }
 
 function debugPanel(info) {
-  if (!new URLSearchParams(location.search).has('debug')) return;
+  if (!DEBUG_MODE || DEBUG_MODE === 'photos') return;
   let pre = document.querySelector('#debug-panel');
   if (!pre) {
     pre = document.createElement('pre');
@@ -901,6 +913,8 @@ function parseLayout(grid) {
 
   const units = [];
   const seen = new Set();
+  const breakdownReportUnits = [];
+  const breakdownOverrides = [];
   for (const sec of sections) {
     for (const h of sec.hits) {
       const key = norm(h.code);
@@ -910,13 +924,23 @@ function parseLayout(grid) {
       if (sec.split != null && sec.sites.length >= 2) {
         site = h.unitCol < sec.split ? sec.sites[0] : sec.sites[1];
       }
+
+      const inBreakdownReport = reportMentionsUnit(h.code, reportLines);
+      const finalStatus = inBreakdownReport ? 'breakdown' : h.status;
+      const cause = matchRemark(h.code, reportLines);
+
+      if (inBreakdownReport) {
+        breakdownReportUnits.push(h.code);
+        if (h.status !== 'breakdown') breakdownOverrides.push(`${h.code}: ${h.status} → breakdown`);
+      }
+
       units.push({
         code: h.code,
         site,
         type: '',
-        status: h.status,
-        statusRaw: h.status,
-        cause: matchRemark(h.code, reportLines),
+        status: finalStatus,
+        statusRaw: inBreakdownReport ? `BREAKDOWN REPORT (CSV status: ${h.status})` : h.status,
+        cause,
         downtime: null,
         hm: null,
         operator: '',
@@ -926,18 +950,59 @@ function parseLayout(grid) {
     }
   }
 
+  /* KPI dihitung ulang dari unit yang benar-benar tampil.
+     Ini mencegah summary CSV yang tertinggal membuat Breakdown = 0. */
+  const counts = { running: 0, standby: 0, breakdown: 0 };
+  for (const u of units) if (u.status in counts) counts[u.status]++;
+  const total = units.length;
+  const computedSummary = {
+    totalunit: total,
+    running: counts.running,
+    standby: counts.standby,
+    breakdown: counts.breakdown,
+    availability: total ? ((counts.running + counts.standby) / total) * 100 : 0,
+  };
+  const sheetSummary = { ...(meta.summary || {}) };
+  meta.sheetSummary = sheetSummary;
+  meta.summary = computedSummary;
+
   /* buang site yang ternyata tidak punya unit */
   const used = new Set(units.map((u) => u.site));
-  return { units, meta, dropped: sections.map((s) => s.sites).flat().filter((s) => !used.has(s)) };
+  return {
+    units,
+    meta,
+    dropped: sections.map((s) => s.sites).flat().filter((s) => !used.has(s)),
+    diagnostics: {
+      breakdownReportLines: reportLines,
+      breakdownReportUnits,
+      breakdownOverrides,
+      sheetSummary,
+      computedSummary,
+    },
+  };
+}
+
+function unitCodeRegex(code) {
+  const m = cleanText(code).toUpperCase().match(/^([A-Z]{1,7})\s*[-.]?\s*(\d{1,3})$/);
+  if (!m) return null;
+  const prefix = m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const n = String(Number(m[2]));
+  return new RegExp(`(^|[^A-Z0-9])${prefix}\\s*[-.]?\\s*0*${n}(?!\\d)`, 'i');
+}
+
+function reportMentionsUnit(code, lines) {
+  const re = unitCodeRegex(code);
+  if (!re) return false;
+  return lines.some((raw) => re.test(cleanText(raw)));
 }
 
 function matchRemark(code, lines) {
-  const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp('(^|[^\\w])' + esc + '(?![\\w])');
+  const re = unitCodeRegex(code);
+  if (!re) return '';
   for (const raw of lines) {
-    const t = raw.replace(/^\s*\d+\s*[.)]\s*/, '').trim();
+    const t = cleanText(raw).replace(/^\s*\d+\s*[.)]\s*/, '').trim();
     if (!re.test(t)) continue;
-    const out = t.replace(re, '').replace(/^[\s—–\-:|]+/, '').trim();
+    const out = t.replace(re, '$1').replace(/^[\s—–\-:|]+/, '').trim();
     if (out && out.length > 2) return out;
   }
   return '';
@@ -1344,8 +1409,10 @@ function load(isRefetch) {
       mode: state.mode,
       unitCount: state.units.length,
       summary: state.meta.summary || {},
+      sheetSummary: state.meta.sheetSummary || null,
       diagnostics: state.diagnostics || null,
     });
+    if (DEBUG_MODE === 'photos') renderPhotoDebugPanel();
 
     const diff = reconcile();
     if (diff && state.source !== 'cache') {
