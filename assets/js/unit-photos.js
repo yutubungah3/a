@@ -17,6 +17,6 @@
  * Key juga toleran terhadap FC-002 / fc_002 / fc002.
  */
 window.UNIT_PHOTOS = {
-  // "FC 002": "assets/photos/FC 002.JPG",
+  "CLBN 02": "assets/photos/clbn-02.JPG"
   // "FC 003": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
 };
