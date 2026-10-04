@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Breakdown Unit</title>
+    <meta
+      name="description"
+      content="Dashboard monitoring harian unit pertambangan berbasis Google Spreadsheet dan Netlify."
+    />
+    <link rel="preconnect" href="https://docs.google.com" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <div class="background-overlay"></div>
+
+    <header class="app-header">
+      <div class="brand-side brand-left">
+        <img id="logoLeft" class="logo" alt="Logo kiri" />
+      </div>
+
+      <div class="brand-center">
+        <p class="eyebrow" id="companyName">Mining Operation Dashboard</p>
+        <h1 id="dashboardTitle">Daily Breakdown Unit</h1>
+        <p class="subtitle">Monitoring harian status unit dan data karyawan setiap site</p>
+      </div>
+
+      <div class="brand-side brand-right">
+        <img id="logoRight" class="logo" alt="Logo kanan" />
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="toolbar panel glass">
+        <div class="tabs" role="tablist" aria-label="Navigasi halaman">
+          <button class="tab active" data-page="units" type="button">Dashboard Unit</button>
+          <button class="tab" data-page="employees" type="button">Data Karyawan</button>
+        </div>
+
+        <div class="controls">
+          <label class="field">
+            <span>Site</span>
+            <select id="siteFilter">
+              <option value="all">Semua site</option>
+            </select>
+          </label>
+          <label class="field search-field">
+            <span>Pencarian</span>
+            <input id="searchInput" type="search" placeholder="Cari unit, karyawan, NIK, status..." />
+          </label>
+          <button id="refreshButton" class="primary-button" type="button">Muat Ulang</button>
+        </div>
+      </section>
+
+      <section id="statusMessage" class="message hidden" role="status"></section>
+
+      <section id="unitsPage" class="page active-page">
+        <section class="stats-grid" aria-label="Ringkasan status unit">
+          <article class="stat-card panel">
+            <span class="stat-label">Total Unit</span>
+            <strong id="totalUnits">0</strong>
+            <small>Semua status</small>
+          </article>
+          <article class="stat-card panel running">
+            <span class="stat-label">Running</span>
+            <strong id="runningUnits">0</strong>
+            <small>Unit beroperasi</small>
+          </article>
+          <article class="stat-card panel standby">
+            <span class="stat-label">Standby</span>
+            <strong id="standbyUnits">0</strong>
+            <small>Unit siap/tunggu</small>
+          </article>
+          <article class="stat-card panel breakdown">
+            <span class="stat-label">Breakdown</span>
+            <strong id="breakdownUnits">0</strong>
+            <small>Unit perbaikan</small>
+          </article>
+        </section>
+
+        <section class="section-head">
+          <div>
+            <h2>Daftar Unit</h2>
+            <p id="unitCountLabel">0 unit ditampilkan</p>
+          </div>
+          <p class="last-updated">Update terakhir website: <span id="lastRefresh">-</span></p>
+        </section>
+
+        <section id="unitGrid" class="card-grid" aria-live="polite"></section>
+      </section>
+
+      <section id="employeesPage" class="page">
+        <section class="section-head">
+          <div>
+            <h2>Data Karyawan</h2>
+            <p id="employeeCountLabel">0 karyawan ditampilkan</p>
+          </div>
+        </section>
+        <section id="employeeGrid" class="card-grid employees" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <footer class="site-footer" id="footerText">Daily Breakdown Unit • Google Spreadsheet + Netlify</footer>
+
+    <template id="emptyTemplate">
+      <article class="empty-state panel">
+        <div class="empty-icon">⌁</div>
+        <h3>Data belum tersedia</h3>
+        <p>Periksa URL CSV, nama kolom spreadsheet, atau publish setting Google Sheets.</p>
+      </article>
+    </template>
+
+    <script src="config.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>
