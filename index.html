@@ -1,116 +1,105 @@
 <!doctype html>
-<html lang="id">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Daily Breakdown Unit</title>
-    <meta
-      name="description"
-      content="Dashboard monitoring harian unit pertambangan berbasis Google Spreadsheet dan Netlify."
-    />
-    <link rel="preconnect" href="https://docs.google.com" />
-    <link rel="stylesheet" href="assets/styles.css" />
-  </head>
-  <body>
-    <div class="background-overlay"></div>
-
-    <header class="app-header">
-      <div class="brand-side brand-left">
-        <img id="logoLeft" class="logo" alt="Logo kiri" />
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f2744">
+  <title>Daily Breakdown Unit</title>
+  <meta name="description" content="Dashboard monitoring harian unit Fixed Plant dari Google Sheets.">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <span class="brand-mark-top"></span>
+          <span class="brand-mark-mid"></span>
+          <span class="brand-mark-bottom"></span>
+        </div>
+        <div>
+          <div class="eyebrow">FIXED PLANT · DAILY OPERATION</div>
+          <h1>Daily Breakdown Unit</h1>
+          <p class="hero-sub">Monitoring kondisi unit dari Google Sheets secara ringkas, cepat, dan mudah dibaca.</p>
+        </div>
       </div>
-
-      <div class="brand-center">
-        <p class="eyebrow" id="companyName">Mining Operation Dashboard</p>
-        <h1 id="dashboardTitle">Daily Breakdown Unit</h1>
-        <p class="subtitle">Monitoring harian status unit dan data karyawan setiap site</p>
-      </div>
-
-      <div class="brand-side brand-right">
-        <img id="logoRight" class="logo" alt="Logo kanan" />
+      <div class="hero-actions">
+        <button class="btn btn-secondary" id="btn-theme" type="button" aria-label="Ganti tema">Tema</button>
+        <button class="btn btn-primary" id="btn-reload" type="button">Muat ulang</button>
       </div>
     </header>
 
-    <main class="shell">
-      <section class="toolbar panel glass">
-        <div class="tabs" role="tablist" aria-label="Navigasi halaman">
-          <button class="tab active" data-page="units" type="button">Dashboard Unit</button>
-          <button class="tab" data-page="employees" type="button">Data Karyawan</button>
+    <main id="content">
+      <div id="banner"></div>
+      <div class="statusbar" id="statusbar"></div>
+
+      <section class="kpis" id="kpis" aria-label="Ringkasan status unit"></section>
+
+      <section class="toolbar" aria-label="Filter unit">
+        <div class="toolbar-title">
+          <strong>Monitoring unit</strong>
+          <span id="filter-summary">Semua unit</span>
         </div>
-
-        <div class="controls">
-          <label class="field">
-            <span>Site</span>
-            <select id="siteFilter">
-              <option value="all">Semua site</option>
-            </select>
-          </label>
-          <label class="field search-field">
-            <span>Pencarian</span>
-            <input id="searchInput" type="search" placeholder="Cari unit, karyawan, NIK, status..." />
-          </label>
-          <button id="refreshButton" class="primary-button" type="button">Muat Ulang</button>
+        <div class="filters">
+          <div class="field">
+            <label for="f-site">Site</label>
+            <select id="f-site"></select>
+          </div>
+          <div class="field">
+            <label for="f-status">Status</label>
+            <select id="f-status"></select>
+          </div>
+          <div class="field search-field">
+            <label for="f-q">Cari unit</label>
+            <input type="search" id="f-q" placeholder="Contoh: FCBN 05" autocomplete="off">
+          </div>
         </div>
       </section>
 
-      <section id="statusMessage" class="message hidden" role="status"></section>
-
-      <section id="unitsPage" class="page active-page">
-        <section class="stats-grid" aria-label="Ringkasan status unit">
-          <article class="stat-card panel">
-            <span class="stat-label">Total Unit</span>
-            <strong id="totalUnits">0</strong>
-            <small>Semua status</small>
-          </article>
-          <article class="stat-card panel running">
-            <span class="stat-label">Running</span>
-            <strong id="runningUnits">0</strong>
-            <small>Unit beroperasi</small>
-          </article>
-          <article class="stat-card panel standby">
-            <span class="stat-label">Standby</span>
-            <strong id="standbyUnits">0</strong>
-            <small>Unit siap/tunggu</small>
-          </article>
-          <article class="stat-card panel breakdown">
-            <span class="stat-label">Breakdown</span>
-            <strong id="breakdownUnits">0</strong>
-            <small>Unit perbaikan</small>
-          </article>
-        </section>
-
-        <section class="section-head">
+      <section class="content-section">
+        <div class="section-heading">
           <div>
-            <h2>Daftar Unit</h2>
-            <p id="unitCountLabel">0 unit ditampilkan</p>
+            <span class="section-kicker">SITE OVERVIEW</span>
+            <h2>Status unit per site</h2>
           </div>
-          <p class="last-updated">Update terakhir website: <span id="lastRefresh">-</span></p>
-        </section>
-
-        <section id="unitGrid" class="card-grid" aria-live="polite"></section>
+          <span class="section-note" id="site-section-note"></span>
+        </div>
+        <div class="site-grid" id="site-grid"></div>
       </section>
 
-      <section id="employeesPage" class="page">
-        <section class="section-head">
+      <section class="breakdown-section" id="breakdown-panel">
+        <div class="breakdown-heading">
           <div>
-            <h2>Data Karyawan</h2>
-            <p id="employeeCountLabel">0 karyawan ditampilkan</p>
+            <span class="section-kicker">ATTENTION REQUIRED</span>
+            <h2>Breakdown Report</h2>
           </div>
-        </section>
-        <section id="employeeGrid" class="card-grid employees" aria-live="polite"></section>
+          <span class="breakdown-count" id="breakdown-count">0 unit</span>
+        </div>
+        <div class="breakdown-list" id="breakdown-list"></div>
       </section>
+
+      <p class="source-note">
+        Status <strong>Maintenance</strong> otomatis digabung menjadi <strong>Breakdown</strong>. Foto unit dapat diisi melalui <code>assets/js/unit-photos.js</code> atau file lokal di <code>assets/photos/</code>.
+        Untuk pengecekan foto, tambahkan <code>?debug=photos</code> pada URL.
+      </p>
     </main>
+  </div>
 
-    <footer class="site-footer" id="footerText">Daily Breakdown Unit • Google Spreadsheet + Netlify</footer>
+  <dialog class="unit-dialog" id="unit-dialog">
+    <button class="dialog-close" id="dialog-close" type="button" aria-label="Tutup">×</button>
+    <div class="dialog-photo-wrap" id="dialog-photo-wrap">
+      <img id="dialog-photo" alt="Foto unit">
+      <div class="dialog-photo-placeholder" id="dialog-photo-placeholder">Tidak ada foto unit</div>
+    </div>
+    <div class="dialog-body">
+      <div class="dialog-site" id="dialog-site"></div>
+      <h3 id="dialog-code"></h3>
+      <div id="dialog-status"></div>
+      <p id="dialog-cause"></p>
+    </div>
+  </dialog>
 
-    <template id="emptyTemplate">
-      <article class="empty-state panel">
-        <div class="empty-icon">⌁</div>
-        <h3>Data belum tersedia</h3>
-        <p>Periksa URL CSV, nama kolom spreadsheet, atau publish setting Google Sheets.</p>
-      </article>
-    </template>
-
-    <script src="config.js"></script>
-    <script src="assets/app.js"></script>
-  </body>
+  <script src="assets/js/unit-photos.js?v=61"></script>
+  <script src="assets/js/app.js?v=61"></script>
+</body>
 </html>
