@@ -180,6 +180,7 @@ function unitPhotoCandidates(unit) {
   const items = [
     driveImageUrl(mapped),
     `assets/photos/${slug}.jpg`,
+    `assets/photos/${slug}.jpeg`
     `assets/photos/${slug}.png`,
     `assets/photos/${slug}.webp`,
   ].filter(Boolean);
