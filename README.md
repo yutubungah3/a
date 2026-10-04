@@ -13,3 +13,18 @@ Versi UI baru berdasarkan project yang sudah berhasil membaca 35 unit dari Googl
 - Parser Google Sheet lama tetap dipertahankan karena sudah berhasil membaca 35 unit.
 
 Lihat `PANDUAN-SPREADSHEET.md` untuk petunjuk foto dan deployment.
+
+## Perbaikan foto pada V6
+
+V6 memperbaiki pemuatan foto lokal dan Google Drive. Lihat `PANDUAN-FOTO.md`.
+
+Disarankan menggunakan mapping eksplisit di `assets/js/unit-photos.js`, contoh:
+
+```js
+window.UNIT_PHOTOS = {
+  "FC 002": "assets/photos/FC 002.JPG",
+  "FCBN 05": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing"
+};
+```
+
+Untuk diagnostic foto buka `/?debug=photos`.

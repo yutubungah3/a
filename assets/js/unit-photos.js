@@ -1,22 +1,22 @@
 /*
- * FOTO UNIT
- * =========
- * Isi link foto berdasarkan kode unit. Bisa memakai URL gambar biasa atau
- * link Google Drive yang sudah dibagikan sebagai "Anyone with the link".
+ * FOTO UNIT — KONFIGURASI PALING DISARANKAN
+ * ==========================================
+ * Gunakan mapping ini agar nama file tidak perlu ditebak browser.
+ * Nilai dapat berupa:
+ *   1) file lokal di assets/photos/
+ *   2) link Google Drive
+ *   3) URL gambar publik biasa
  *
- * Contoh:
- * window.UNIT_PHOTOS = {
- *   "FC 002": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
- *   "FCBN 05": "https://example.com/foto-fcbn-05.jpg"
- * };
+ * Contoh lokal:
+ *   "FC 002": "assets/photos/FC 002.JPG",
+ *   "FCBN 05": "assets/photos/fcbn-05.jpg",
  *
- * Alternatif tanpa mengedit file ini:
- * taruh foto di assets/photos/ dengan nama kode unit menjadi huruf kecil
- * dan spasi diganti tanda minus, misalnya:
- *   FC 002   -> assets/photos/fc-002.jpg
- *   FCBN 05  -> assets/photos/fcbn-05.jpg
- *   CLBA 01  -> assets/photos/clba-01.jpg
+ * Contoh Google Drive (file harus: Anyone with the link / Viewer):
+ *   "FC 003": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
+ *
+ * Key juga toleran terhadap FC-002 / fc_002 / fc002.
  */
-window.UNIT_PHOTOS = window.UNIT_PHOTOS || {
-  "CLBN 02": "https://drive.google.com/file/d/1aJpsRqr-PAzZEivHT7tgkgp3_gjtem5v/view?usp=sharing"
+window.UNIT_PHOTOS = {
+  // "FC 002": "assets/photos/FC 002.JPG",
+  // "FC 003": "https://drive.google.com/file/d/FILE_ID/view?usp=sharing",
 };

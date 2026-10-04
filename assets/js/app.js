@@ -21,7 +21,7 @@ const CONFIG = {
   /* CSV dipertahankan sebagai fallback untuk sheet tabel biasa. */
   SHEET_CSV_URL: '/sheet-csv',
 
-  REFRESH_MINUTES: 1,    // auto refresh; 0 = mati
+  REFRESH_MINUTES: 5,    // auto refresh; 0 = mati
   STALE_HOURS: 8,
 
   /* Dipakai hanya oleh fallback parser CSV lama. */
@@ -163,28 +163,112 @@ function photoSlug(code) {
     .replace(/^-+|-+$/g, '');
 }
 
-function driveImageUrl(url) {
-  const raw = String(url || '').trim();
+function extractDriveFileId(value) {
+  const raw = String(value || '').trim();
   if (!raw) return '';
-  const m = raw.match(/drive\.google\.com\/file\/d\/([^/?#]+)/i)
-    || raw.match(/[?&]id=([^&#]+)/i);
-  if (m && m[1]) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(m[1])}&sz=w1200`;
-  return raw;
+
+  // Jika user menempel ID file langsung.
+  if (/^[A-Za-z0-9_-]{20,}$/.test(raw) && !raw.includes('/')) return raw;
+
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^/?#]+)/i,
+    /drive\.google\.com\/open\?[^#]*\bid=([^&#]+)/i,
+    /drive\.google\.com\/uc\?[^#]*\bid=([^&#]+)/i,
+    /drive\.google\.com\/thumbnail\?[^#]*\bid=([^&#]+)/i,
+    /[?&]id=([^&#]+)/i,
+  ];
+  for (const re of patterns) {
+    const m = raw.match(re);
+    if (m && m[1]) return decodeURIComponent(m[1]);
+  }
+  return '';
+}
+
+function driveImageCandidates(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return [];
+  const id = extractDriveFileId(raw);
+  if (!id) return [raw];
+
+  // Beberapa endpoint dicoba karena perilaku hotlink Google Drive bisa berbeda.
+  return [
+    `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w1200`,
+    `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1200`,
+    `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`,
+  ];
+}
+
+function photoMapValue(code) {
+  const map = window.UNIT_PHOTOS || {};
+  const raw = String(code || '').trim();
+  const targetSlug = photoSlug(raw);
+  const direct = map[raw] || map[norm(raw)] || map[targetSlug];
+  if (direct) return direct;
+
+  // Toleran terhadap key seperti "FC-002", "fc_002", atau "FC002".
+  for (const [key, value] of Object.entries(map)) {
+    if (photoSlug(key) === targetSlug) return value;
+    if (photoSlug(key).replace(/-/g, '') === targetSlug.replace(/-/g, '')) return value;
+  }
+  return '';
+}
+
+function localPhotoCandidates(code) {
+  const raw = String(code || '').trim();
+  const upper = norm(raw);
+  const slug = photoSlug(raw);
+  const compact = slug.replace(/-/g, '');
+  const underscored = slug.replace(/-/g, '_');
+  const fileBases = [
+    slug,
+    upper.replace(/\s+/g, '-'),
+    upper.replace(/\s+/g, '_'),
+    raw,
+    compact,
+    underscored,
+  ].filter(Boolean);
+
+  const exts = ['jpg', 'jpeg', 'png', 'webp', 'JPG', 'JPEG', 'PNG', 'WEBP'];
+  const out = [];
+  for (const base of [...new Set(fileBases)]) {
+    for (const ext of exts) {
+      // encodeURI menjaga slash tetapi mengubah spasi menjadi %20.
+      out.push(encodeURI(`assets/photos/${base}.${ext}`));
+    }
+  }
+  return out;
 }
 
 function unitPhotoCandidates(unit) {
-  const map = window.UNIT_PHOTOS || {};
   const code = String(unit.code || '').trim();
-  const mapped = map[code] || map[norm(code)] || unit.photo || '';
-  const slug = photoSlug(code);
+  const mapped = photoMapValue(code) || unit.photo || '';
   const items = [
-    driveImageUrl(mapped),
-    `assets/photos/${slug}.jpg`,
-    `assets/photos/${slug}.jpeg`
-    `assets/photos/${slug}.png`,
-    `assets/photos/${slug}.webp`,
+    ...driveImageCandidates(mapped),
+    ...localPhotoCandidates(code),
   ].filter(Boolean);
   return [...new Set(items)];
+}
+
+const PHOTO_DIAGNOSTICS = {};
+
+function recordPhotoDiagnostic(code, patch) {
+  const key = String(code || '').trim();
+  PHOTO_DIAGNOSTICS[key] = { ...(PHOTO_DIAGNOSTICS[key] || {}), ...patch };
+  if (new URLSearchParams(location.search).get('debug') === 'photos') {
+    window.clearTimeout(recordPhotoDiagnostic._timer);
+    recordPhotoDiagnostic._timer = window.setTimeout(renderPhotoDebugPanel, 100);
+  }
+}
+
+function renderPhotoDebugPanel() {
+  let pre = document.querySelector('#photo-debug-panel');
+  if (!pre) {
+    pre = document.createElement('pre');
+    pre.id = 'photo-debug-panel';
+    pre.style.cssText = 'margin:16px auto;max-width:1280px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:auto;';
+    document.querySelector('.app-shell').appendChild(pre);
+  }
+  pre.textContent = JSON.stringify(PHOTO_DIAGNOSTICS, null, 2);
 }
 
 function photoPlaceholderMarkup(code) {
@@ -206,21 +290,32 @@ function hydrateUnitPhotos(root = document) {
   root.querySelectorAll('img[data-photo-candidates]').forEach((img) => {
     if (img.dataset.photoReady === '1') return;
     img.dataset.photoReady = '1';
+    const button = img.closest('[data-unit-open]');
+    const code = button ? button.dataset.unitOpen : (img.alt || '').replace(/^Foto\s+/i, '');
     let list = [];
     try { list = JSON.parse(decodeURIComponent(img.dataset.photoCandidates || '')) || []; } catch (_) {}
     let idx = 0;
+    const tried = [];
+    recordPhotoDiagnostic(code, { configured: photoMapValue(code) || null, candidates: list, tried: [], loaded: null });
+
     const next = () => {
       if (idx >= list.length) {
         img.hidden = true;
+        recordPhotoDiagnostic(code, { tried: [...tried], loaded: null, status: 'not-found' });
         return;
       }
+      const src = list[idx++];
+      tried.push(src);
       img.hidden = false;
-      img.src = list[idx++];
+      img.src = src;
+      recordPhotoDiagnostic(code, { tried: [...tried], current: src, status: 'trying' });
     };
+
     img.addEventListener('load', () => {
       img.hidden = false;
       const ph = img.nextElementSibling;
       if (ph) ph.hidden = true;
+      recordPhotoDiagnostic(code, { tried: [...tried], loaded: img.currentSrc || img.src, status: 'loaded' });
     });
     img.addEventListener('error', () => next());
     next();
