@@ -17,4 +17,6 @@
  *   FCBN 05  -> assets/photos/fcbn-05.jpg
  *   CLBA 01  -> assets/photos/clba-01.jpg
  */
-window.UNIT_PHOTOS = window.UNIT_PHOTOS || {};
+window.UNIT_PHOTOS = window.UNIT_PHOTOS || {
+  "CLBN 02": "https://drive.google.com/file/d/1aJpsRqr-PAzZEivHT7tgkgp3_gjtem5v/view?usp=sharing"
+};
